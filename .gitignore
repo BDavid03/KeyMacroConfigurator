@@ -2,4 +2,4 @@
 *.bak
 *.tmp
 .vscode/
-profiles/*.local/
+profiles/*Apps/
