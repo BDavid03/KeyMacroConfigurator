@@ -1,0 +1,5 @@
+*.exe
+*.bak
+*.tmp
+.vscode/
+profiles/*.local/
