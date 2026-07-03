@@ -146,11 +146,3 @@ a -> import pandas as pd
 Now pressing `a` will paste that text instead of typing `a`.
 
 Switch back to `Default` to restore normal keyboard behavior.
-
-## Manual test
-
-See:
-
-```text
-tests/manual-test-plan.md
-```
