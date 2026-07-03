@@ -3,4 +3,5 @@
 *.tmp
 .vscode/
 profiles/*Apps/
+profiles/Apps*
 profiles/Apps/
