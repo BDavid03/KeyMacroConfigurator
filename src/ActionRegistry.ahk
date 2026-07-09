@@ -1,23 +1,37 @@
+#Include Functions.ahk
+
 class ActionRegistry {
     __New(profileStore) {
         this.ProfileStore := profileStore
+        this.Functions := Map()
+        this.Functions.CaseSense := "Off"
+        RegisterBuiltinFunctions(this)
+    }
+
+    Register(name, fn) {
+        this.Functions[name] := fn
+    }
+
+    GetFunctionNames() {
+        names := []
+        for name in this.Functions { 
+            names.Push(name) 
+        }
+        return names
     }
 
     Execute(keyName) {
         profile := this.ProfileStore.CurrentProfile
 
-        if !IsObject(profile) {
+        if !IsObject(profile) { 
+            return 
+        }
+        if (profile["name"] = "Default") { 
             return
         }
-
-        if (profile["name"] = "Default") {
-            return
-        }
-
         if !profile["enabled"] {
             return
         }
-
         bindings := profile["bindings"]
         if !bindings.Has(keyName) {
             return
@@ -28,16 +42,11 @@ class ActionRegistry {
         value := action["value"]
 
         switch actionType {
-            case "Text":
-                this.PasteText(value)
-            case "Send":
-                Send(value)
-            case "Run":
-                Run(value)
-            case "Function":
-                this.RunNamedFunction(value)
-            default:
-                this.PasteText(value)
+            case "Text": this.PasteText(value)
+            case "Send": Send(value)
+            case "Run": Run(value)
+            case "Function": this.RunNamedFunction(value)
+            default: this.PasteText(value)
         }
     }
 
@@ -59,26 +68,21 @@ class ActionRegistry {
     RunNamedFunction(functionName) {
         functionName := Trim(functionName)
 
-        switch functionName {
-            case "ShowDate":
-                this.PasteText(FormatTime(A_Now, "yyyy-MM-dd"))
-            case "ShowDateTime":
-                this.PasteText(FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss"))
-            case "ReloadScript":
-                Reload()
-            case "WritePythonPrint":
-                WritePythonPrint()
-            case "SuspendHotkeys":
-                Suspend(-1)
-            case "OpenScriptFolder":
-                Run(A_ScriptDir)
-            default:
-                MsgBox("Unknown function: " functionName)
+        if this.Functions.Has(functionName) {
+            this.Functions[functionName]()
+            return
         }
-    }
-}
 
-WritePythonPrint() {
-    SendText "print('')"
-    Send "{Left 2}"
+        ; Fall back to any global function with this name, so functions
+        ; defined in Functions.ahk work without an explicit Register call.
+        try {
+            fn := %functionName%
+            if HasMethod(fn) {
+                fn()
+                return
+            }
+        }
+
+        MsgBox("Unknown function: " functionName)
+    }
 }

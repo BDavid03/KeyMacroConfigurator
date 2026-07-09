@@ -2,6 +2,7 @@
 #Include ActionRegistry.ahk
 #Include HotkeyLayer.ahk
 #Include Gui/MainWindow.ahk
+#Include Gui/ProfileOsd.ahk
 #Include Util/Tooltips.ahk
 
 class App {
@@ -11,6 +12,7 @@ class App {
         this.Actions := ActionRegistry(this.ProfileStore)
         this.Hotkeys := HotkeyLayer(this.ProfileStore, this.Actions)
         this.MainWindow := ""
+        this.Osd := ProfileOsd()
     }
 
     Start() {
@@ -24,8 +26,14 @@ class App {
         ; Default profile intentionally registers no macro hotkeys.
         this.Hotkeys.ApplyCurrentProfile()
 
+        ; Global profile switching, works in any window.
+        Hotkey("^!PgUp", (*) => this.CycleProfile(-1))
+        Hotkey("^!PgDn", (*) => this.CycleProfile(1))
+        Hotkey("^!Home", (*) => this.SetProfile("Default"))
+
         this.MainWindow.Show()
-        TrayTip "Keyboard Configurator", "Started in Default profile. No keys are captured.", 1
+        this.Osd.ShowProfile("Default", "Normal keyboard — no macros")
+        TrayTip "Keyboard Configurator", "Started in Default profile. Ctrl+Alt+PageUp/PageDown switches profiles.", 1
     }
 
     SetProfile(profileName) {
@@ -34,13 +42,36 @@ class App {
 
         this.ProfileStore.SetCurrentProfile(profileName)
         this.Hotkeys.ApplyCurrentProfile()
-        this.MainWindow.Refresh()
 
-        if (profileName = "Default") {
-            Notify("Default profile active: keyboard is normal.")
-        } else {
-            Notify("Profile active: " profileName)
+        if IsObject(this.MainWindow) {
+            this.MainWindow.Refresh()
         }
+
+        profile := this.ProfileStore.CurrentProfile
+        if (profileName = "Default") {
+            subtitle := "Normal keyboard — no macros"
+        } else {
+            subtitle := profile["enabled"] ? "Macro layer active" : "Profile is disabled"
+        }
+        this.Osd.ShowProfile(profileName, subtitle)
+    }
+
+    CycleProfile(direction) {
+        names := this.ProfileStore.GetProfileNames()
+        if (names.Length = 0) {
+            return
+        }
+
+        current := 1
+        for index, name in names {
+            if (name = this.ProfileStore.CurrentProfileName) {
+                current := index
+                break
+            }
+        }
+
+        next := Mod(current - 1 + direction + names.Length, names.Length) + 1
+        this.SetProfile(names[next])
     }
 
     ToggleCurrentProfileEnabled() {
@@ -62,7 +93,7 @@ class App {
         }
 
         if (Trim(keyName) = "") {
-            Notify("Pick a key first.")
+            Notify("Click a key on the keyboard first.")
             return
         }
 
